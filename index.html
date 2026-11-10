@@ -3,15 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Operation: Balikbayan | Mia &amp; Monami</title>
+<title>Operation: Balikbayan | Mia and Monami</title>
 <meta name="description" content="A ten-mission adventure starring Mia and Monami. Splash the catfish, slipper the red flags, win over the family.">
 <meta property="og:title" content="Operation: Balikbayan">
 <meta property="og:description" content="Play as Mia or Monami: two stories, twenty missions, one long-distance love. Free in your browser.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://operationbalikbayan.miaandmonami.com/">
-<meta property="og:site_name" content="Mia &amp; Monami">
-<meta property="og:image" content="https://operationbalikbayan.miaandmonami.com/og.jpg">
-<meta property="og:image:secure_url" content="https://operationbalikbayan.miaandmonami.com/og.jpg">
+<meta property="og:site_name" content="Mia and Monami">
+<meta property="og:image" content="https://operationbalikbayan.miaandmonami.com/og-v2.jpg">
+<meta property="og:image:secure_url" content="https://operationbalikbayan.miaandmonami.com/og-v2.jpg">
 <meta property="og:image:type" content="image/jpeg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -19,7 +19,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Operation: Balikbayan">
 <meta name="twitter:description" content="Play as Mia or Monami: two stories, twenty missions, one long-distance love.">
-<meta name="twitter:image" content="https://operationbalikbayan.miaandmonami.com/og.jpg">
+<meta name="twitter:image" content="https://operationbalikbayan.miaandmonami.com/og-v2.jpg">
 <link rel="icon" href="og-square.png">
 <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@600;800&display=swap" rel="stylesheet">
 <style>:root{color-scheme:dark}
@@ -169,7 +169,7 @@ button.small{font-size:16px;padding:8px 16px;border-radius:10px}
 </div>
 
 <div id="scrTitle" class="screen bgsun">
-  <h1 class="logo"><small>MIA &amp; MONAMI IN</small>OPERATION:<br>BALIKBAYAN</h1>
+  <h1 class="logo"><small>MIA AND MONAMI IN</small>OPERATION:<br>BALIKBAYAN</h1>
   <div id="previewWrap"></div>
   <p class="tag">8,000 miles. One airport, one fiesta, one videoke machine, one typhoon and one visa interview stand between them.</p>
   <div class="row"><button id="btnPlay">START CAMPAIGN</button><button id="btnHow" class="alt">HOW TO PLAY</button></div>
@@ -228,7 +228,7 @@ button.small{font-size:16px;padding:8px 16px;border-radius:10px}
   <p class="tag">Same time zone at last. Wherever you both are &mdash; that's home.<br><b>Salamat for playing!</b></p>
   <div class="row"><button id="btnEndMenu">BACK TO MISSIONS</button></div>
 </div>
-<div id="loading" class="screen bgsun"><h1 class="logo"><small>MIA &amp; MONAMI IN</small>OPERATION:<br>BALIKBAYAN</h1><p class="tag" style="font-size:22px"><b>Loading the world&hellip;</b></p></div>
+<div id="loading" class="screen bgsun"><h1 class="logo"><small>MIA AND MONAMI IN</small>OPERATION:<br>BALIKBAYAN</h1><p class="tag" style="font-size:22px"><b>Loading the world&hellip;</b></p></div>
 <div id="err"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -1627,7 +1627,7 @@ const _vb=VM.build;VM.build=function(c){_vb.call(this,c);if(G.save.gold&&this.sl
 // ---------- prize ----------
 function prizeCode(){const n=(G.save.name||'PLAYER').toUpperCase(),t=totalScore();let h=7;for(const ch of n+t)h=(h*31+ch.charCodeAt(0))%1679616;return 'MM-'+('0000'+h.toString(36).toUpperCase()).slice(-4)+'-'+('000'+(t%1000)).slice(-3);}
 const _end=showEnding;showEnding=function(){_end();let c=$('cert');if(!c){c=document.createElement('div');c.id='cert';c.className='panel';c.style.cssText='max-width:560px;padding:16px 26px';$('scrEnd').insertBefore(c,$('scrEnd').lastElementChild);}
-  c.innerHTML='<div class="disp" style="font-size:26px;color:#fcd116">GRAND PRIZE: CERTIFICATE OF APPROVAL</div><div style="font-size:17px;margin:6px 0">Awarded to <b id="certName"></b> for completing all 10 missions</div><div style="font-size:17px">Total score <b style="color:#fcd116">'+totalScore().toLocaleString()+'</b></div><div class="disp" style="font-size:34px;letter-spacing:.12em;margin-top:6px;color:#ff7ab8">'+prizeCode()+'</div><div style="font-size:13px;opacity:.8">Screenshot this code to claim your prize from Mia &amp; Monami.</div>';
+  c.innerHTML='<div class="disp" style="font-size:26px;color:#fcd116">GRAND PRIZE: CERTIFICATE OF APPROVAL</div><div style="font-size:17px;margin:6px 0">Awarded to <b id="certName"></b> for completing all 10 missions</div><div style="font-size:17px">Total score <b style="color:#fcd116">'+totalScore().toLocaleString()+'</b></div><div class="disp" style="font-size:34px;letter-spacing:.12em;margin-top:6px;color:#ff7ab8">'+prizeCode()+'</div><div style="font-size:13px;opacity:.8">Screenshot this code to claim your prize from Mia and Monami.</div>';
   $('certName').textContent=G.save.name||'Player';};
 // ---------- scoreboard + leaderboard ----------
 const Board={db:null,uid:null,rows:null,
