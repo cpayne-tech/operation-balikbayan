@@ -1794,6 +1794,55 @@ const _bm9=buildMissions;buildMissions=function(){useStory(G.save.who);_bm9();co
   n.textContent=G.save.who==='mia'?'Mia’s journey: from the Embassy in Manila to a new home in America. Monami has his own ten missions — switch characters to play them.':'Monami’s journey: from the airport in Manila to the family’s blessing. Mia has her own ten missions — switch characters to play them.';};
 const _uc9=updateContinue;updateContinue=function(){if(G.save&&!G.save.story)useStory(G.save.who);_uc9();const b=$('btnCont');if(b&&b.style.display!=='none')b.textContent='CONTINUE '+(G.save.who==='mia'?'MIA':'MONAMI')+': MISSION '+Math.min(G.save.unlocked,LEVELS.length);};
 const _ld9=loadLevel;loadLevel=function(i){if(G.save&&G.save.story!==(G.save.who==='mia'?'mia':'monami'))useStory(G.save.who);_ld9(i);};
+// ===================== ADAPTIVE GRAPHICS (tablets/phones) + GENERATIVE MUSIC =====================
+// Graphics levels: 0 full, 1 lower resolution, 2 no bloom + fewer lights + small shadows, 3 no shadows + lowest resolution.
+const Perf={lvl:0,manual:false,noPost:false,acc:0,n:0,ready:false,
+ start(){if(this.ready)return;this.ready=true;let s=null;try{s=JSON.parse(localStorage.getItem('ob_perf'));}catch(e){}
+  if(s&&typeof s.lvl==='number'){this.lvl=clamp(s.lvl,0,3);this.manual=!!s.manual;}else this.lvl=G.mobile?2:0;},
+ save(){try{localStorage.setItem('ob_perf',JSON.stringify({lvl:this.lvl,manual:this.manual}));}catch(e){}},
+ apply(){const l=this.lvl,base=Math.min(window.devicePixelRatio||1,G.mobile?1.3:2),pr=[base,base*0.75,Math.min(base,1),Math.min(base,1)*0.7][l];
+  renderer.setPixelRatio(pr);renderer.setSize(innerWidth,innerHeight,false);if(composer){composer.setPixelRatio(pr);composer.setSize(innerWidth,innerHeight);}
+  this.noPost=l>=2||!composer;renderer.toneMapping=this.noPost?THREE.ACESFilmicToneMapping:THREE.NoToneMapping;renderer.toneMappingExposure=finalPass?finalPass.uniforms.exposure.value:1.1;
+  if(sun){sun.castShadow=l<3;const sz=l>=2?512:(G.mobile?1024:2048);if(sun.shadow.mapSize.x!==sz){sun.shadow.mapSize.set(sz,sz);if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null;}}}
+  if(l>=2&&scene)while(Lamps.pool.length>4)scene.remove(Lamps.pool.pop());
+  if(scene)scene.traverse(o=>{if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{m.needsUpdate=true;});});
+  const b=$('btnGfx');if(b)b.textContent='GRAPHICS: '+['BEST','HIGH','SMOOTH','FASTEST'][l];},
+ tick(dt){const now=performance.now(),real=(now-(this.last||now))/1000;this.last=now;
+  if(G.state!=='play'||this.manual||this.lvl>=3||G.time<4||document.hidden||real>0.25){this.acc=0;this.n=0;return;}this.acc+=real;this.n++;
+  if(this.acc>=2.5){const fps=this.n/this.acc;this.acc=0;this.n=0;if(fps<33){this.lvl++;this.apply();this.save();toast('Graphics adjusted for smoother play');}}}
+};
+const _rf10=renderFrame;renderFrame=function(dt){if(Perf.noPost){if(G.sky)G.sky.position.copy(camera.position);renderer.render(scene,camera);}else _rf10(dt);Perf.tick(dt);};
+const _ns10=newScene;newScene=function(env){_ns10(env);Perf.start();Perf.acc=0;Perf.n=0;Perf.apply();};
+const _li10=Lamps.init;Lamps.init=function(n){Perf.start();_li10.call(this,Perf.lvl>=2?4:n);};
+(function(){const row=$('btnResume').parentNode,b=document.createElement('button');b.id='btnGfx';b.className='alt small';b.textContent='GRAPHICS';row.parentNode.insertBefore(b,row.nextSibling);b.style.marginTop='12px';
+  b.onclick=()=>{Perf.start();Perf.lvl=(Perf.lvl+1)%4;Perf.manual=true;if(G.sceneReady)Perf.apply();else b.textContent='GRAPHICS: '+['BEST','HIGH','SMOOTH','FASTEST'][Perf.lvl];Perf.save();};})();
+
+// ---------- music that keeps changing: chord progressions, motifs and fills are re-rolled every four bars ----------
+const SONGS={
+ menu:{bpm:92,root:57,minor:false,wave:'triangle',dens:0.42,prog:[[0,5,3,4],[0,3,5,4],[5,3,0,4],[0,2,3,4]],bass:[0,__,__,__,4,__,__,__,0,__,__,__,4,__,2,__],hat:[0,0,1,0]},
+ airport:{bpm:132,root:55,minor:true,wave:'square',dens:0.55,prog:[[0,0,5,6],[0,6,5,4],[3,4,0,0],[0,2,5,4]],bass:[0,__,0,__,0,__,0,7,0,__,0,__,4,__,0,__],kick:[1,0,0,0,1,0,0,0],snare:[0,0,0,0,1,0,0,0],hat:[0,0,1,0]},
+ fiesta:{bpm:118,root:60,minor:false,wave:'square',dens:0.6,prog:[[0,3,4,0],[0,5,3,4],[3,4,5,0],[0,4,5,3]],bass:[0,__,4,__,0,__,4,__,0,__,4,__,2,__,4,__],kick:[1,0,0,0,1,0,0,0],snare:[0,0,0,0,1,0,0,1],hat:[0,0,1,1]},
+ karaoke:{bpm:124,root:57,minor:true,wave:'sawtooth',dens:0.5,prog:[[0,5,3,4],[0,6,5,4],[3,6,0,4],[0,3,5,6]],bass:[0,7,0,7,0,7,0,7],kick:[1,0,0,0],snare:[0,0,0,0,1,0,0,0],hat:[0,0,1,0]},
+ storm:{bpm:100,root:50,minor:true,wave:'sawtooth',dens:0.3,prog:[[0,0,5,4],[0,3,5,0],[5,4,0,0],[0,6,3,4]],bass:[0,__,__,0,__,__,0,__,__,__,4,__,__,__,__,__],kick:[1,0,0,1,0,0,1,0],hat:[0,1]},
+ boss:{bpm:150,root:52,minor:true,wave:'sawtooth',dens:0.65,prog:[[0,0,3,4],[0,6,5,4],[0,3,6,4],[0,5,6,4]],bass:[0,0,__,0,0,__,0,__,0,0,__,0,4,4,__,7],kick:[1,0,1,0,1,0,1,1],snare:[0,0,0,0,1,0,0,0],hat:[1]}
+};
+Sound.music=function(style){if(style===this._cur)return;this._cur=style;clearInterval(this._mt);if(!this.ctx||!style)return;const S=SONGS[style];if(!S)return;
+  const c=this.ctx,self=this,spb=60/S.bpm/4,sc=S.minor?[0,2,3,5,7,8,10]:[0,2,4,5,7,9,11],hz=m=>440*Math.pow(2,(m-69)/12),deg=d=>S.root+sc[((d%7)+7)%7]+12*Math.floor(d/7);
+  const rng=seed=>()=>{seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
+  const salt=Math.floor(Math.random()*1e6);let step=0,next=c.currentTime+0.1,section=-1,prog=S.prog[0],motif=null,last=7,fill=false,oct=0,lead=S.wave;
+  const makeBar=(r,dens)=>{const b=[];let n=last;for(let i=0;i<16;i++){const p=i%4===0?0.85:(i%2===0?dens:dens*0.35);if(r()<p){n+=Math.round((r()-0.5)*5);n=Math.max(3,Math.min(13,n));b.push(n);}else b.push(null);}last=n;return b;};
+  this._mt=setInterval(()=>{if(c.state!=='running')return;if(next<c.currentTime)next=c.currentTime+0.05;
+    while(next<c.currentTime+0.3){const bar=Math.floor(step/16),i=step%16,sec=Math.floor(bar/4),bi=bar%4;
+      if(sec!==section){section=sec;const r=rng(sec*7919+salt);prog=S.prog[Math.floor(r()*S.prog.length)];motif=[makeBar(r,S.dens),makeBar(r,S.dens*0.8)];fill=r()<0.55;oct=r()<0.3?12:0;lead=r()<0.25?(S.wave==='square'?'triangle':'square'):S.wave;self._rest=sec%6===5;}
+      const ch=prog[bi],src=bi===1?motif[1]:motif[0];let m=src[i];if(bi===3&&i>=8){const r=rng(bar*31+i+salt);m=r()<0.6?src[15-i]:null;}
+      if(m!==null&&m!==undefined&&!self._rest){let d=m+ch;if(i%4===0){const rel=((m%7)+7)%7;if(rel!==0&&rel!==2&&rel!==4)d-=1;}self._tone(next,hz(deg(d)+12+oct),spb*1.7,lead,lead==='triangle'?0.34:0.15,null,self.mg);}
+      const bp=S.bass[i%S.bass.length];if(bp!==null&&bp!==undefined)self._tone(next,hz(deg(ch+bp)-12),spb*1.8,'triangle',0.5,null,self.mg);
+      if(i===0)for(const t of[0,2,4])self._tone(next,hz(deg(ch+t)),spb*15,'sine',0.07,null,self.mg);
+      if(S.kick&&S.kick[i%S.kick.length])self._tone(next,130,0.12,'sine',0.7,40,self.mg);
+      if(S.snare&&S.snare[i%S.snare.length])self._noise(next,0.09,0.2,1800,0.8,null,self.mg);
+      if(S.hat&&S.hat[i%S.hat.length])self._noise(next,0.03,0.1,7000,2,null,self.mg);
+      if(fill&&bi===3&&i>=12)self._noise(next,0.06,0.2,900+(i-12)*400,1,null,self.mg);
+      step++;next+=spb;}},90);};
 </script>
 </body>
 </html>
