@@ -456,6 +456,15 @@ function initPost(){if(!THREE.EffectComposer||!THREE.UnrealBloomPass||!THREE.Sha
 function renderFrame(dt){if(G.sky)G.sky.position.copy(camera.position);if(composer){finalPass.uniforms.time.value+=dt;composer.render(dt);}else renderer.render(scene,camera);}
 let _envRT=null;
 function skySphereMat(h,mul){return new THREE.MeshBasicMaterial({map:h.tex,side:THREE.BackSide,fog:false,depthWrite:false,color:new THREE.Color(mul,mul,mul)});}
+// Visible sky backdrop. The RGBE texture must use NearestFilter, which looks blocky when stretched across the sky,
+// so decode it once to an 8-bit sRGB copy (values / SKY_K, so up to SKY_K stays unclipped) that can be smoothed.
+const SKY_K=2;
+function hdrSkyTex(h){if(h.sky)return h.sky;const im=h.tex.image,d=im.data,o=new Uint8Array(d.length);
+  for(let i=0;i<d.length;i+=4){const f=d[i+3]?Math.pow(2,d[i+3]-136)/SKY_K:0;
+    for(let c=0;c<3;c++){const v=Math.min(1,(d[i+c]+0.5)*f);o[i+c]=Math.round(255*(v<=0.0031308?v*12.92:1.055*Math.pow(v,1/2.4)-0.055));}o[i+3]=255;}
+  const t=new THREE.DataTexture(o,im.width,im.height,THREE.RGBAFormat,THREE.UnsignedByteType);t.encoding=THREE.sRGBEncoding;t.flipY=h.tex.flipY;
+  t.wrapS=THREE.RepeatWrapping;t.minFilter=t.magFilter=THREE.LinearFilter;t.generateMipmaps=false;t.needsUpdate=true;return h.sky=t;}
+function skyBackdropMat(h,mul){const k=mul*SKY_K;return new THREE.MeshBasicMaterial({map:hdrSkyTex(h),side:THREE.BackSide,fog:false,depthWrite:false,color:new THREE.Color(k,k,k)});}
 function makeEnv(env){const s=new THREE.Scene(),h=env.hdri&&Assets.hdr[env.hdri];
   if(h)s.add(new THREE.Mesh(new THREE.SphereGeometry(60,32,16),skySphereMat(h,env.hdrI===undefined?1:env.hdrI)));
   else{s.add(new THREE.Mesh(new THREE.SphereGeometry(60,24,12),new THREE.MeshBasicMaterial({map:skyTex(env.skyTop,env.skyBot),side:THREE.BackSide})));
@@ -471,9 +480,10 @@ const Lamps={spots:[],pool:[],
 };
 // ===================== REAL ASSETS (CC0, Poly Haven) =====================
 const Assets={tex:{},hdr:{},models:{},
- load(){if(typeof ASSETS!=='undefined')return this._load(ASSETS);
-  return Promise.all(['tex','hdr','glb','chr'].map(k=>fetch('ob_'+k+'.json').then(r=>r.ok?r.json():null).catch(()=>null))).then(r=>this._load({tex:r[0]||{},hdr:r[1]||{},glb:r[2]||{},chr:r[3]||{}}));},
- _load(A){const jobs=[],self=this;
+ onProgress:null,_p:0,_prog(p){if(p>this._p){this._p=p;if(this.onProgress)try{this.onProgress(p);}catch(e){}}},// p: 0..1
+ load(){if(typeof ASSETS!=='undefined')return this._load(ASSETS,0);let got=0;
+  return Promise.all(['tex','hdr','glb','chr'].map(k=>fetch('ob_'+k+'.json').then(r=>r.ok?r.json():null).catch(()=>null).then(j=>{this._prog(0.6*(++got)/4);return j;}))).then(r=>this._load({tex:r[0]||{},hdr:r[1]||{},glb:r[2]||{},chr:r[3]||{}},0.6));},
+ _load(A,base){const jobs=[],self=this;base=base||0;
   const b64buf=s=>{const bin=atob(s),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u;};
   const img=(src,srgb)=>new Promise(res=>{const im=new Image();im.onload=()=>{const t=new THREE.Texture(im);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=8;if(srgb)t.encoding=THREE.sRGBEncoding;t.needsUpdate=true;res(t);};im.onerror=()=>res(null);im.src=src;});
   for(const name in A.tex){const t=A.tex[name];jobs.push(Promise.all([img(t.d,true),img(t.n,false),img(t.a,false)]).then(r=>{if(r[0]&&r[1]&&r[2])self.tex[name]={map:r[0],normalMap:r[1],arm:r[2],tile:t.tile};}));}
@@ -486,7 +496,8 @@ const Assets={tex:{},hdr:{},models:{},
       const bb=new THREE.Box3().setFromObject(sc);self.models[id]={scene:sc,min:bb.min.clone(),size:bb.getSize(new THREE.Vector3()),center:bb.getCenter(new THREE.Vector3())};res();},()=>res());}catch(e){res();}}));}
   if(THREE.GLTFLoader&&A.chr){const L=new THREE.GLTFLoader();for(const id in A.chr)jobs.push(new Promise(res=>{try{L.parse(b64buf(A.chr[id]).buffer,'',g=>{const sc=g.scene;sc.updateMatrixWorld(true);
       const bb=new THREE.Box3().setFromObject(sc);self.chr[id]={scene:sc,animations:g.animations,min:bb.min.clone(),size:bb.getSize(new THREE.Vector3()),center:bb.getCenter(new THREE.Vector3())};res();},()=>res());}catch(e){res();}}));}
-  return Promise.all(jobs).then(()=>{A.tex=A.hdr=A.glb=A.chr=null;});}
+  let done=0;jobs.forEach(j=>j.then(()=>self._prog(base+(1-base)*(++done)/jobs.length)));
+  return Promise.all(jobs).then(()=>{self._prog(1);A.tex=A.hdr=A.glb=A.chr=null;});}
 };
 Assets.chr={};
 const _skinMat={};
@@ -692,7 +703,7 @@ function newScene(env){
   scene=new THREE.Scene();World.reset();
   const hd=env.hdri&&Assets.hdr[env.hdri];G.sky=null;
   if(hd&&env.sunFromHDR){const d=hd.sun.clone();d.y=Math.max(d.y,0.3);d.normalize().multiplyScalar(46);env.sunDir=[d.x,d.y,d.z];}
-  if(hd&&env.skyHDR){G.sky=new THREE.Mesh(new THREE.SphereGeometry(420,32,16),skySphereMat(hd,env.skyHDR));G.sky.frustumCulled=false;scene.add(G.sky);}
+  if(hd&&env.skyHDR){G.sky=new THREE.Mesh(new THREE.SphereGeometry(420,32,16),skyBackdropMat(hd,env.skyHDR));G.sky.frustumCulled=false;scene.add(G.sky);}
   G.enemies=[];G.projs=[];G.fx=[];G.rings=[];G.pickups=[];G.interacts=[];G.npcs=[];
   scene.background=skyTex(env.skyTop,env.skyBot);
   scene.fog=new THREE.Fog(col(env.fog),env.fogNear,env.fogFar);
